@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ShoppingBag, Sparkles } from "lucide-react";
+import { AlertCircle, ShoppingBag, Sparkles, Package, CreditCard, TrendingUp, Tag, Gift, Star, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -95,53 +95,100 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative Background Pattern */}
+      {/* Animated Background Gradient Orbs */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Top Left */}
-        <div className="absolute top-10 left-10 opacity-5">
-          <ShoppingBag className="w-32 h-32" />
-          <p className="text-6xl font-bold mt-2">CLICK CART</p>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      {/* Decorative Shopping Icons */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Top Left Corner */}
+        <div className="absolute top-10 left-10 opacity-10 animate-fade-in">
+          <Package className="w-20 h-20 text-primary" />
+        </div>
+        <div className="absolute top-32 left-5 opacity-5">
+          <p className="text-4xl font-bold text-primary">CLICK CART</p>
         </div>
         
-        {/* Top Right */}
-        <div className="absolute top-20 right-10 opacity-5">
-          <ShoppingBag className="w-40 h-40" />
-          <p className="text-7xl font-bold mt-2">CC</p>
+        {/* Top Right Corner */}
+        <div className="absolute top-16 right-10 opacity-10 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <Gift className="w-24 h-24 text-secondary" />
+        </div>
+        <div className="absolute top-5 right-20 opacity-10 animate-bounce-subtle">
+          <Star className="w-12 h-12 text-primary fill-primary" />
         </div>
         
-        {/* Bottom Left */}
-        <div className="absolute bottom-10 left-10 opacity-5">
-          <p className="text-8xl font-bold">CLICK CART</p>
-          <ShoppingBag className="w-36 h-36 mt-2" />
+        {/* Left Side */}
+        <div className="absolute top-1/3 left-5 opacity-10 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <CreditCard className="w-16 h-16 text-primary" />
+        </div>
+        <div className="absolute top-1/2 left-16 opacity-5">
+          <p className="text-6xl font-bold text-primary">CC</p>
+        </div>
+        <div className="absolute bottom-1/3 left-8 opacity-10 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+          <Tag className="w-14 h-14 text-secondary" />
         </div>
         
-        {/* Bottom Right */}
-        <div className="absolute bottom-20 right-10 opacity-5">
-          <p className="text-6xl font-bold">CC</p>
-          <ShoppingBag className="w-32 h-32 mt-2" />
+        {/* Right Side */}
+        <div className="absolute top-1/3 right-10 opacity-10 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <TrendingUp className="w-18 h-18 text-secondary" />
+        </div>
+        <div className="absolute top-1/2 right-5 opacity-5">
+          <p className="text-5xl font-bold text-secondary">AI SHOP</p>
+        </div>
+        <div className="absolute bottom-1/3 right-12 opacity-10 animate-fade-in" style={{ animationDelay: '0.7s' }}>
+          <Zap className="w-16 h-16 text-primary fill-primary" />
         </div>
         
-        {/* Center decorative elements */}
-        <div className="absolute top-1/2 left-5 -translate-y-1/2 opacity-5">
-          <ShoppingBag className="w-24 h-24" />
+        {/* Bottom Left Corner */}
+        <div className="absolute bottom-16 left-10 opacity-10 animate-fade-in" style={{ animationDelay: '0.5s' }}>
+          <ShoppingBag className="w-20 h-20 text-primary" />
         </div>
-        <div className="absolute top-1/2 right-5 -translate-y-1/2 opacity-5">
-          <ShoppingBag className="w-24 h-24" />
+        <div className="absolute bottom-5 left-5 opacity-5">
+          <p className="text-3xl font-bold text-primary">SMART SHOPPING</p>
+        </div>
+        
+        {/* Bottom Right Corner */}
+        <div className="absolute bottom-20 right-16 opacity-10 animate-fade-in" style={{ animationDelay: '0.8s' }}>
+          <Package className="w-22 h-22 text-secondary" />
+        </div>
+        <div className="absolute bottom-8 right-5 opacity-5">
+          <p className="text-4xl font-bold text-secondary">DEALS</p>
+        </div>
+
+        {/* Floating Elements */}
+        <div className="absolute top-1/4 left-1/4 opacity-8 animate-bounce-subtle" style={{ animationDelay: '0.5s' }}>
+          <Star className="w-8 h-8 text-primary" />
+        </div>
+        <div className="absolute bottom-1/4 right-1/4 opacity-8 animate-bounce-subtle" style={{ animationDelay: '1s' }}>
+          <Sparkles className="w-10 h-10 text-secondary" />
         </div>
       </div>
       
       <div className="w-full max-w-md animate-fade-in relative z-10">
-        <Card className="shadow-floating border-0 bg-gradient-card">
-          <CardHeader className="text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <ShoppingBag className="w-8 h-8 text-primary" />
-              <Sparkles className="w-6 h-6 text-secondary animate-bounce-subtle" />
+        <Card className="shadow-floating border-0 bg-gradient-card backdrop-blur-sm">
+          <CardHeader className="text-center space-y-4 pb-6">
+            <div className="flex items-center justify-center space-x-3">
+              <div className="relative">
+                <ShoppingBag className="w-10 h-10 text-primary" />
+                <Sparkles className="w-5 h-5 text-secondary animate-bounce-subtle absolute -top-1 -right-1" />
+              </div>
             </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              CLICK CART (CC)
-            </CardTitle>
-            <CardDescription className="text-base">
-              AI Enhanced Shopping Experience
+            <div>
+              <CardTitle className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+                CLICK CART
+              </CardTitle>
+              <div className="flex items-center justify-center space-x-2 text-xs text-muted-foreground">
+                <Zap className="w-3 h-3 text-primary" />
+                <span>AI-Powered Shopping</span>
+                <Star className="w-3 h-3 text-secondary fill-secondary" />
+                <span>Best Prices</span>
+                <TrendingUp className="w-3 h-3 text-primary" />
+              </div>
+            </div>
+            <CardDescription className="text-base font-medium">
+              Join the Future of Smart Shopping
             </CardDescription>
           </CardHeader>
 
@@ -281,9 +328,23 @@ const Auth = () => {
             </Tabs>
           </CardContent>
 
-          <CardFooter className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Join thousands of smart shoppers using AI-powered pricing
+          <CardFooter className="text-center flex-col space-y-3 pt-6">
+            <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
+              <div className="flex items-center space-x-1">
+                <Package className="w-4 h-4 text-primary" />
+                <span>Fast Delivery</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <CreditCard className="w-4 h-4 text-secondary" />
+                <span>Secure Pay</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Tag className="w-4 h-4 text-primary" />
+                <span>Best Deals</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Join 10,000+ smart shoppers using AI-powered pricing
             </p>
           </CardFooter>
         </Card>
