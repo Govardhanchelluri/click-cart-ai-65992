@@ -94,8 +94,43 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
-      <div className="w-full max-w-md animate-fade-in">
+    <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative Background Pattern */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Top Left */}
+        <div className="absolute top-10 left-10 opacity-5">
+          <ShoppingBag className="w-32 h-32" />
+          <p className="text-6xl font-bold mt-2">CLICK CART</p>
+        </div>
+        
+        {/* Top Right */}
+        <div className="absolute top-20 right-10 opacity-5">
+          <ShoppingBag className="w-40 h-40" />
+          <p className="text-7xl font-bold mt-2">CC</p>
+        </div>
+        
+        {/* Bottom Left */}
+        <div className="absolute bottom-10 left-10 opacity-5">
+          <p className="text-8xl font-bold">CLICK CART</p>
+          <ShoppingBag className="w-36 h-36 mt-2" />
+        </div>
+        
+        {/* Bottom Right */}
+        <div className="absolute bottom-20 right-10 opacity-5">
+          <p className="text-6xl font-bold">CC</p>
+          <ShoppingBag className="w-32 h-32 mt-2" />
+        </div>
+        
+        {/* Center decorative elements */}
+        <div className="absolute top-1/2 left-5 -translate-y-1/2 opacity-5">
+          <ShoppingBag className="w-24 h-24" />
+        </div>
+        <div className="absolute top-1/2 right-5 -translate-y-1/2 opacity-5">
+          <ShoppingBag className="w-24 h-24" />
+        </div>
+      </div>
+      
+      <div className="w-full max-w-md animate-fade-in relative z-10">
         <Card className="shadow-floating border-0 bg-gradient-card">
           <CardHeader className="text-center space-y-4">
             <div className="flex items-center justify-center space-x-2">
