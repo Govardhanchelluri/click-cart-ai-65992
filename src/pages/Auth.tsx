@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, ShoppingBag, Sparkles, Package, CreditCard, TrendingUp, Tag, Gift, Star, Zap, ShoppingCart, Coins, DollarSign, Percent } from "lucide-react";
+import { AlertCircle, ShoppingBag, Sparkles, Package, CreditCard, TrendingUp, Tag, Gift, Star, Zap, ShoppingCart, Coins, DollarSign, Percent, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 
 const SHOPPING_QUOTES = [
   "Shopping is the best therapy.",
@@ -20,18 +22,52 @@ const SHOPPING_QUOTES = [
   "Great finds, better prices.",
 ];
 
+// Validation schemas
+const signupSchema = z.object({
+  fullName: z.string().trim().min(1, "Full name is required").max(100, "Name must be less than 100 characters"),
+  username: z.string().trim().min(3, "Username must be at least 3 characters").max(30, "Username must be less than 30 characters").regex(/\d/, "Username must contain at least one number"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters"),
+  phone: z.string().trim().max(20, "Phone number must be less than 20 characters").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must include at least 1 uppercase letter")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least 1 special character"),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+const signinSchema = z.object({
+  email: z.string().trim().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
 const Auth = () => {
   const [isSignIn, setIsSignIn] = useState(true);
   const [formData, setFormData] = useState({
+    fullName: "",
     username: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: ""
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [currentQuote, setCurrentQuote] = useState(0);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -40,67 +76,114 @@ const Auth = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const validateUsername = (username: string) => {
-    return /\d/.test(username);
+  const handleSignIn = async () => {
+    setLoading(true);
+    setErrors([]);
+
+    try {
+      const validatedData = signinSchema.parse({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: validatedData.email,
+        password: validatedData.password,
+      });
+
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          setErrors(["Invalid email or password. Please try again."]);
+        } else {
+          setErrors([error.message]);
+        }
+        return;
+      }
+
+      if (data.session) {
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in to CLICK CART",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors(error.errors.map((err) => err.message));
+      } else {
+        setErrors(["An unexpected error occurred. Please try again."]);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const validatePassword = (password: string) => {
-    const hasMinLength = password.length >= 8;
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const hasUpperCase = /[A-Z]/.test(password);
-    
-    return {
-      hasMinLength,
-      hasSpecialChar,
-      hasUpperCase,
-      isValid: hasMinLength && hasSpecialChar && hasUpperCase
-    };
+  const handleSignUp = async () => {
+    setLoading(true);
+    setErrors([]);
+
+    try {
+      const validatedData = signupSchema.parse(formData);
+
+      // Check if username already exists by trying to query profiles
+      const { data: existingUsername } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', validatedData.username)
+        .maybeSingle();
+
+      if (existingUsername) {
+        setErrors(["Username already taken. Please choose another one."]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: validatedData.email,
+        password: validatedData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: validatedData.fullName,
+            username: validatedData.username,
+            phone_number: validatedData.phone || "",
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          setErrors(["Email already registered. Please sign in instead."]);
+        } else {
+          setErrors([error.message]);
+        }
+        return;
+      }
+
+      if (data.session) {
+        toast({
+          title: "Account created!",
+          description: "Welcome to CLICK CART - AI Enhanced Shopping",
+        });
+        navigate("/");
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors(error.errors.map((err) => err.message));
+      } else {
+        setErrors(["An unexpected error occurred. Please try again."]);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newErrors: string[] = [];
-
-    // Validate username
-    if (!validateUsername(formData.username)) {
-      newErrors.push("Username must contain at least one number");
-    }
-
-    // Validate password
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.hasMinLength) {
-      newErrors.push("Password must be at least 8 characters long");
-    }
-    if (!passwordValidation.hasSpecialChar) {
-      newErrors.push("Password must contain at least 1 special character (@, #, $, !, etc.)");
-    }
-    if (!passwordValidation.hasUpperCase) {
-      newErrors.push("Password must include at least 1 uppercase letter");
-    }
-
-    // Validate confirm password for sign up
-    if (!isSignIn && formData.password !== formData.confirmPassword) {
-      newErrors.push("Passwords do not match");
-    }
-
-    // Validate email for sign up
-    if (!isSignIn && !formData.email.includes("@")) {
-      newErrors.push("Please enter a valid email address");
-    }
-
-    setErrors(newErrors);
-
-    if (newErrors.length === 0) {
-      toast({
-        title: isSignIn ? "Welcome back!" : "Account created!",
-        description: isSignIn ? "Successfully signed in to CLICK CART" : "Welcome to CLICK CART - AI Enhanced Shopping",
-      });
-      
-      // Simulate successful authentication
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("username", formData.username);
-      
-      navigate("/");
+    if (isSignIn) {
+      handleSignIn();
+    } else {
+      handleSignUp();
     }
   };
 
@@ -262,8 +345,10 @@ const Auth = () => {
               setIsSignIn(value === "signin");
               setErrors([]);
               setFormData({
+                fullName: "",
                 username: "",
                 email: "",
+                phone: "",
                 password: "",
                 confirmPassword: ""
               });
@@ -276,13 +361,15 @@ const Auth = () => {
               <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-username">Username</Label>
+                    <Label htmlFor="signin-email">Email</Label>
                     <Input
-                      id="signin-username"
-                      placeholder="Enter username (must contain a number)"
-                      value={formData.username}
-                      onChange={(e) => handleInputChange("username", e.target.value)}
+                      id="signin-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
                   
@@ -295,6 +382,7 @@ const Auth = () => {
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
 
@@ -314,14 +402,34 @@ const Auth = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-primary hover:opacity-90 transition-all duration-300 transform hover:scale-105"
+                    disabled={loading}
                   >
-                    Sign In to CLICK CART
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Signing In...
+                      </>
+                    ) : (
+                      "Sign In to CLICK CART"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-fullname">Full Name</Label>
+                    <Input
+                      id="signup-fullname"
+                      placeholder="Enter your full name"
+                      value={formData.fullName}
+                      onChange={(e) => handleInputChange("fullName", e.target.value)}
+                      className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="signup-username">Username</Label>
                     <Input
@@ -330,6 +438,7 @@ const Auth = () => {
                       value={formData.username}
                       onChange={(e) => handleInputChange("username", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
                   
@@ -342,6 +451,20 @@ const Auth = () => {
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Phone Number (Optional)</Label>
+                    <Input
+                      id="signup-phone"
+                      type="tel"
+                      placeholder="Enter your phone number"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
                   
@@ -354,6 +477,7 @@ const Auth = () => {
                       value={formData.password}
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
                   
@@ -366,6 +490,7 @@ const Auth = () => {
                       value={formData.confirmPassword}
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
+                      disabled={loading}
                     />
                   </div>
 
@@ -385,8 +510,16 @@ const Auth = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-primary hover:opacity-90 transition-all duration-300 transform hover:scale-105"
+                    disabled={loading}
                   >
-                    Create CLICK CART Account
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Account...
+                      </>
+                    ) : (
+                      "Create CLICK CART Account"
+                    )}
                   </Button>
                 </form>
               </TabsContent>
