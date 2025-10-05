@@ -81,6 +81,13 @@ const Auth = () => {
     setErrors([]);
 
     try {
+      // Validate that it's an email format
+      if (!formData.email.includes('@')) {
+        setErrors(["Please use your email address to sign in, not your username."]);
+        setLoading(false);
+        return;
+      }
+
       const validatedData = signinSchema.parse({
         email: formData.email,
         password: formData.password,
@@ -93,7 +100,9 @@ const Auth = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          setErrors(["Invalid email or password. Please try again."]);
+          setErrors(["Invalid email or password. Please check your credentials and try again."]);
+        } else if (error.message.includes("Email not confirmed")) {
+          setErrors(["Please confirm your email before signing in."]);
         } else {
           setErrors([error.message]);
         }
@@ -361,16 +370,18 @@ const Auth = () => {
               <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">Email Address</Label>
                     <Input
                       id="signin-email"
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder="Enter your email address"
                       value={formData.email}
                       onChange={(e) => handleInputChange("email", e.target.value)}
                       className="transition-all duration-300 focus:shadow-card"
                       disabled={loading}
+                      autoComplete="email"
                     />
+                    <p className="text-xs text-muted-foreground">Use your email to sign in</p>
                   </div>
                   
                   <div className="space-y-2">
