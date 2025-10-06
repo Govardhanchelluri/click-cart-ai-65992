@@ -13,6 +13,9 @@ import Category from "./pages/Category";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
+import Profile from "./pages/Profile";
+import Orders from "./pages/Orders";
+import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +81,21 @@ const App = () => (
           <Route path="/order-success" element={
             <ProtectedRoute>
               <OrderSuccess />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/orders" element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          } />
+          <Route path="/wishlist" element={
+            <ProtectedRoute>
+              <Wishlist />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

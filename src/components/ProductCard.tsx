@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductCardProps {
   id: string;
@@ -24,6 +26,7 @@ interface ProductCardProps {
   isPopular?: boolean;
   demandLevel?: "high" | "medium" | "low";
   timeOfDay?: "morning" | "afternoon" | "evening";
+  onWishlistUpdate?: () => void;
 }
 
 const ProductCard = ({
@@ -37,10 +40,35 @@ const ProductCard = ({
   stock,
   isPopular = false,
   demandLevel = "medium",
-  timeOfDay = "afternoon"
+  timeOfDay = "afternoon",
+  onWishlistUpdate
 }: ProductCardProps) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    checkWishlistStatus();
+  }, [id]);
+
+  const checkWishlistStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("wishlist")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", id)
+        .maybeSingle();
+
+      setIsWishlisted(!!data);
+    } catch (error) {
+      console.error("Error checking wishlist:", error);
+    }
+  };
 
   // AI Dynamic Pricing Logic
   const calculateDynamicPrice = () => {
@@ -79,17 +107,73 @@ const ProductCard = ({
 
   const handleAddToCart = () => {
     toast({
-      title: "Added to cart",
+      title: "Added to Cart!",
       description: `${name} has been added to your cart`,
     });
   };
 
-  const handleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
+  const handleBuyNow = () => {
+    navigate("/cart");
     toast({
-      title: isWishlisted ? "Removed from wishlist" : "Added to wishlist",
-      description: `${name} ${isWishlisted ? "removed from" : "added to"} your wishlist`,
+      title: "Proceed to Checkout",
+      description: "Taking you to cart to complete your purchase",
     });
+  };
+
+  const handleWishlist = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Login Required",
+          description: "Please login to add items to wishlist",
+          variant: "destructive"
+        });
+        navigate("/auth");
+        return;
+      }
+
+      if (isWishlisted) {
+        await supabase
+          .from("wishlist")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("product_id", id);
+
+        setIsWishlisted(false);
+        toast({
+          title: "Removed from Wishlist",
+          description: `${name} removed from your wishlist`,
+        });
+      } else {
+        await supabase
+          .from("wishlist")
+          .insert({
+            user_id: user.id,
+            product_id: id
+          });
+
+        setIsWishlisted(true);
+        toast({
+          title: "Added to Wishlist!",
+          description: `${name} added to your wishlist`,
+        });
+      }
+
+      onWishlistUpdate?.();
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update wishlist",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -122,23 +206,6 @@ const ProductCard = ({
           )}
         </div>
         
-        <div className="absolute top-2 right-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-8 h-8 bg-background/80 backdrop-blur-sm hover:bg-background transition-all duration-300"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleWishlist();
-            }}
-          >
-            <Heart 
-              className={`w-4 h-4 transition-colors duration-300 ${
-                isWishlisted ? "fill-red-500 text-red-500" : "text-muted-foreground"
-              }`} 
-            />
-          </Button>
-        </div>
 
         {/* AI Pricing Indicator */}
         <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-background/90 backdrop-blur-sm rounded-full px-2 py-1">
@@ -193,9 +260,10 @@ const ProductCard = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-2">
           <Button 
-            className="flex-1 bg-gradient-primary hover:opacity-90 transition-all duration-300 text-sm"
+            className="flex-1 transition-all duration-300 text-sm"
+            variant="outline"
             onClick={(e) => {
               e.stopPropagation();
               handleAddToCart();
@@ -206,12 +274,31 @@ const ProductCard = ({
           </Button>
           <Button 
             variant="outline" 
-            size="sm"
-            className="px-3 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+            size="icon"
+            disabled={isLoading}
+            className={`transition-all duration-300 ${
+              isWishlisted 
+                ? "bg-error text-error-foreground hover:bg-error/90" 
+                : "hover:bg-accent"
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleWishlist();
+            }}
           >
-            Buy Now
+            <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
           </Button>
         </div>
+        <Button 
+          className="w-full bg-gradient-primary hover:opacity-90 transition-all duration-300 text-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleBuyNow();
+          }}
+        >
+          <Zap className="w-3 h-3 mr-1" />
+          Buy Now
+        </Button>
       </CardContent>
     </Card>
   );
