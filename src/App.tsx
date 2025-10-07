@@ -13,6 +13,8 @@ import Category from "./pages/Category";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
+import Feedback from "./pages/Feedback";
+import SearchResults from "./pages/SearchResults";
 import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
@@ -81,6 +83,16 @@ const App = () => (
           <Route path="/order-success" element={
             <ProtectedRoute>
               <OrderSuccess />
+            </ProtectedRoute>
+          } />
+          <Route path="/feedback" element={
+            <ProtectedRoute>
+              <Feedback />
+            </ProtectedRoute>
+          } />
+          <Route path="/search" element={
+            <ProtectedRoute>
+              <SearchResults />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={

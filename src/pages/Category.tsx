@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
@@ -17,6 +18,45 @@ const Category = () => {
   const [priceRange, setPriceRange] = useState([0, 50000]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [categoryId]);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("category", categoryId || "")
+        .limit(20);
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedProducts = data.map(product => ({
+          id: product.id,
+          name: product.name,
+          image: product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+          originalPrice: Number(product.original_price),
+          currentPrice: Number(product.current_price),
+          rating: Number(product.rating),
+          reviewCount: product.review_count,
+          stock: product.stock,
+          isPopular: product.is_popular,
+          demandLevel: product.demand_level as "high" | "medium" | "low"
+        }));
+        setProducts(formattedProducts);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categoryInfo = {
     topwear: {
@@ -71,34 +111,6 @@ const Category = () => {
 
   const currentCategory = categoryInfo[categoryId as keyof typeof categoryInfo];
 
-  // Mock products data with AI pricing
-  const generateMockProducts = (category: string) => {
-    const baseProducts = [
-      { name: "Premium Cotton Shirt", basePrice: 1999, rating: 4.3, reviews: 245 },
-      { name: "Casual Denim Jeans", basePrice: 2499, rating: 4.5, reviews: 567 },
-      { name: "Sports Running Shoes", basePrice: 4999, rating: 4.7, reviews: 189 },
-      { name: "Wireless Bluetooth Headphones", basePrice: 3499, rating: 4.2, reviews: 334 },
-      { name: "Smart Fitness Watch", basePrice: 12999, rating: 4.6, reviews: 123 },
-      { name: "Designer Laptop Bag", basePrice: 3999, rating: 4.4, reviews: 198 },
-      { name: "Classic Polo T-Shirt", basePrice: 1599, rating: 4.1, reviews: 456 },
-      { name: "Formal Black Shoes", basePrice: 5999, rating: 4.5, reviews: 234 }
-    ];
-
-    return baseProducts.map((product, index) => ({
-      id: `${category}-${index}`,
-      name: `${product.name} - ${currentCategory?.title}`,
-      image: `https://images.unsplash.com/photo-${1500000000000 + index}?w=300&h=300&fit=crop`,
-      originalPrice: product.basePrice,
-      currentPrice: product.basePrice,
-      rating: product.rating,
-      reviewCount: product.reviews,
-      stock: Math.floor(Math.random() * 50) + 5,
-      isPopular: Math.random() > 0.7,
-      demandLevel: ["high", "medium", "low"][Math.floor(Math.random() * 3)] as "high" | "medium" | "low"
-    }));
-  };
-
-  const products = generateMockProducts(categoryId || "");
 
   const handleBrandChange = (brand: string, checked: boolean) => {
     if (checked) {
@@ -280,17 +292,27 @@ const Category = () => {
 
           {/* Products Grid */}
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {products.map((product, index) => (
-                <div 
-                  key={product.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <ProductCard {...product} />
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex justify-center items-center min-h-[400px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {products.map((product, index) => (
+                  <div 
+                    key={product.id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <ProductCard {...product} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-lg">No products found in this category</p>
+              </div>
+            )}
 
             {/* Load More */}
             <div className="text-center mt-12">

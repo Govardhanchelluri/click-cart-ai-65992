@@ -146,19 +146,10 @@ const Header = ({ cartItemCount = 0 }: HeaderProps) => {
     }
 
     setShowSuggestions(false);
-    const categoryMap: { [key: string]: string } = {
-      "shoes": "shoes",
-      "slippers": "shoes",
-      "shirts": "topwear",
-      "t-shirts": "topwear",
-      "jeans": "bottomwear",
-      "trousers": "bottomwear",
-      "electronics": "electronics",
-      "accessories": "accessories"
-    };
-
-    const category = categoryMap[query.toLowerCase()] || "topwear";
-    navigate(`/category/${category}`);
+    setSearchQuery("");
+    
+    // Navigate to search results page
+    navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
   const handleSuggestionClick = (suggestion: string) => {

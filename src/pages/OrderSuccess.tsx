@@ -1,9 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Header from "@/components/Header";
 import { 
   CheckCircle, 
@@ -14,16 +21,66 @@ import {
   Download,
   Star,
   Heart,
-  Zap
+  Zap,
+  PartyPopper
 } from "lucide-react";
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(true);
 
   useEffect(() => {
     // Clear cart on successful order
     localStorage.removeItem("cart");
   }, []);
+
+  const handleDownloadInvoice = () => {
+    // Generate invoice data
+    const invoiceData = `
+CLICK CART - INVOICE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Order ID: ${orderDetails.orderId}
+Date: ${orderDetails.orderDate}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CUSTOMER DETAILS:
+Shipping Address: ${orderDetails.shippingAddress}
+
+ORDER ITEMS:
+${orderDetails.items.map(item => `
+${item.name}
+Quantity: ${item.quantity}
+Price: ₹${item.price.toLocaleString()}
+Subtotal: ₹${(item.price * item.quantity).toLocaleString()}
+`).join('\n')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${orderDetails.total.toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Payment Method: ${orderDetails.paymentMethod || 'Online Payment'}
+Status: Paid
+
+Expected Delivery: ${orderDetails.estimatedDelivery}
+
+Thank you for shopping with CLICK CART!
+AI-Enhanced Shopping Experience
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact: clickcart@gmail.com
+Support: 9898786652
+    `.trim();
+
+    // Create and download the invoice
+    const blob = new Blob([invoiceData], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ClickCart_Invoice_${orderDetails.orderId}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
 
   const orderDetails = {
     orderId: "CC24001",
@@ -52,12 +109,43 @@ const OrderSuccess = () => {
       }
     ],
     total: 13772,
-    shippingAddress: "123 Main Street, Mumbai, Maharashtra 400001"
+    shippingAddress: "123 Main Street, Mumbai, Maharashtra 400001",
+    paymentMethod: "UPI"
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header cartItemCount={0} />
+
+      {/* Success Popup Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center">
+                <PartyPopper className="w-10 h-10 text-success animate-bounce" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-2xl">
+              Order Placed Successfully!
+            </DialogTitle>
+            <DialogDescription className="text-center text-base">
+              🎉 Thank you for shopping with Click Cart! 🎉
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-center space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Your order #{orderDetails.orderId} has been confirmed
+            </p>
+            <Button 
+              onClick={() => setShowSuccessDialog(false)}
+              className="w-full bg-gradient-primary hover:opacity-90"
+            >
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <div className="container mx-auto px-4 py-8">
         {/* Success Header */}
@@ -200,7 +288,7 @@ const OrderSuccess = () => {
                   <Button 
                     variant="outline" 
                     className="flex items-center gap-2"
-                    onClick={() => {/* Download invoice logic */}}
+                    onClick={handleDownloadInvoice}
                   >
                     <Download className="w-4 h-4" />
                     Download Invoice
@@ -291,7 +379,11 @@ const OrderSuccess = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Help other shoppers by sharing your experience with these products.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate("/feedback")}
+                >
                   <Heart className="w-4 h-4 mr-2" />
                   Write a Review
                 </Button>

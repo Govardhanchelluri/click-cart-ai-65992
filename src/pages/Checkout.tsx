@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
+import upiQrCode from "@/assets/upi-qr-code.jpg";
 import { 
   CreditCard, 
   Smartphone, 
@@ -293,6 +294,12 @@ const Checkout = () => {
                       icon={Wallet}
                       description="Paytm, Amazon Pay"
                     />
+                    <PaymentMethodCard
+                      id="cod"
+                      title="Cash on Delivery"
+                      icon={Wallet}
+                      description="Pay when you receive"
+                    />
                   </div>
 
                   {/* Payment Details */}
@@ -344,15 +351,41 @@ const Checkout = () => {
                   )}
 
                   {formData.paymentMethod === "upi" && (
+                    <div className="pt-4 border-t space-y-4">
+                      <div>
+                        <Label htmlFor="upiId">UPI ID (Optional)</Label>
+                        <Input
+                          id="upiId"
+                          value={formData.upiId}
+                          onChange={(e) => handleInputChange("upiId", e.target.value)}
+                          placeholder="yourname@paytm"
+                        />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-3">Or Scan QR Code to Pay</p>
+                        <div className="inline-block p-4 bg-white rounded-lg">
+                          <img 
+                            src={upiQrCode} 
+                            alt="UPI QR Code" 
+                            className="w-48 h-48 object-contain"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          UPI ID: 9390143685-2@ybl
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.paymentMethod === "cod" && (
                     <div className="pt-4 border-t">
-                      <Label htmlFor="upiId">UPI ID</Label>
-                      <Input
-                        id="upiId"
-                        value={formData.upiId}
-                        onChange={(e) => handleInputChange("upiId", e.target.value)}
-                        placeholder="yourname@paytm"
-                        required
-                      />
+                      <div className="p-4 bg-warning/10 rounded-lg">
+                        <p className="text-sm font-medium mb-2">Cash on Delivery</p>
+                        <p className="text-xs text-muted-foreground">
+                          Pay ₹{total.toLocaleString()} in cash when your order is delivered. 
+                          Please keep exact change ready.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </CardContent>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import CategoryCard from "@/components/CategoryCard";
 import ProductCard from "@/components/ProductCard";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Shirt, 
   ShoppingBag, 
@@ -21,6 +23,52 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    fetchTrendingProducts();
+    
+    // Auto-refresh trending products every 5 minutes
+    const interval = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+      fetchTrendingProducts();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [refreshKey]);
+
+  const fetchTrendingProducts = async () => {
+    try {
+      // Fetch random products from Supabase
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .limit(50);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        // Randomly select 3 products
+        const shuffled = [...data].sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 3).map(product => ({
+          id: product.id,
+          name: product.name,
+          image: product.image_url || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+          originalPrice: Number(product.original_price),
+          currentPrice: Number(product.current_price),
+          rating: Number(product.rating),
+          reviewCount: product.review_count,
+          stock: product.stock,
+          isPopular: product.is_popular,
+          demandLevel: product.demand_level as "high" | "medium" | "low"
+        }));
+        setTrendingProducts(selected);
+      }
+    } catch (error) {
+      console.error("Error fetching trending products:", error);
+    }
+  };
 
   const categories = [
     {
@@ -92,43 +140,6 @@ const Home = () => {
     }
   ];
 
-  const trendingProducts = [
-    {
-      id: "1",
-      name: "Premium Cotton Polo Shirt - Classic Fit",
-      image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-      originalPrice: 2499,
-      currentPrice: 2499,
-      rating: 4.5,
-      reviewCount: 234,
-      stock: 15,
-      isPopular: true,
-      demandLevel: "high" as const
-    },
-    {
-      id: "2", 
-      name: "Wireless Bluetooth Earbuds Pro",
-      image: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=300&h=300&fit=crop",
-      originalPrice: 5999,
-      currentPrice: 5999,
-      rating: 4.3,
-      reviewCount: 567,
-      stock: 8,
-      isPopular: true,
-      demandLevel: "high" as const
-    },
-    {
-      id: "3",
-      name: "Smart Fitness Watch with Heart Rate Monitor",
-      image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-      originalPrice: 12999,
-      currentPrice: 12999,
-      rating: 4.7,
-      reviewCount: 189,
-      stock: 25,
-      demandLevel: "medium" as const
-    }
-  ];
 
   const handleCategoryClick = (categoryId: string) => {
     navigate(`/category/${categoryId}`);
@@ -259,24 +270,32 @@ const Home = () => {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold mb-2">Trending Now</h2>
-              <p className="text-muted-foreground">Most demanded products with AI-optimized pricing</p>
+              <p className="text-muted-foreground">
+                Most demanded products with AI-optimized pricing • Updates every 5 minutes
+              </p>
             </div>
             <Badge className="bg-warning text-warning-foreground animate-bounce-subtle">
               🔥 Hot Deals
             </Badge>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trendingProducts.map((product, index) => (
-              <div 
-                key={product.id}
-                className="animate-scale-in"
-                style={{ animationDelay: `${index * 0.2}s` }}
-              >
-                <ProductCard {...product} />
-              </div>
-            ))}
-          </div>
+          {trendingProducts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {trendingProducts.map((product, index) => (
+                <div 
+                  key={product.id}
+                  className="animate-scale-in"
+                  style={{ animationDelay: `${index * 0.2}s` }}
+                >
+                  <ProductCard {...product} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">Loading trending products...</p>
+            </div>
+          )}
         </div>
       </section>
 
