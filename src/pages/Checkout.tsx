@@ -23,6 +23,7 @@ import {
   Zap
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -79,15 +80,77 @@ const Checkout = () => {
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Get cart items from localStorage
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      
+      if (cart.length === 0) {
+        throw new Error("Cart is empty");
+      }
+
+      // Get user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Please log in to complete your order");
+      }
+
+      // Prepare order data
+      const orderData = {
+        items: cart.map((item: any) => ({
+          product_id: item.id,
+          product_name: item.name,
+          product_image: item.image_url || "",
+          quantity: item.quantity || 1,
+          price: item.current_price
+        })),
+        shipping_address: {
+          fullName: `${formData.firstName} ${formData.lastName}`,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.pincode,
+          phone: formData.phone
+        },
+        payment_method: formData.paymentMethod,
+        payment_transaction_id: formData.paymentMethod === "upi" 
+          ? formData.upiId || "UPI_" + Date.now() 
+          : formData.paymentMethod === "card"
+          ? "CARD_" + Date.now()
+          : "COD"
+      };
+
+      // Call secure Edge Function to create order
+      const { data, error } = await supabase.functions.invoke('create-order', {
+        body: orderData
+      });
+
+      if (error) {
+        console.error("Order creation error:", error);
+        throw new Error(error.message || "Failed to create order");
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to create order");
+      }
+
+      // Clear cart after successful order
+      localStorage.removeItem("cart");
+      
       setIsProcessing(false);
       toast({
         title: "Order placed successfully!",
-        description: "Your order #CC24001 has been confirmed",
+        description: `Your order #${data.order_id.slice(0, 8)} has been confirmed`,
       });
       navigate("/order-success");
-    }, 3000);
+    } catch (error: any) {
+      console.error("Order error:", error);
+      setIsProcessing(false);
+      toast({
+        title: "Order failed",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      });
+    }
   };
 
   const PaymentMethodCard = ({ 

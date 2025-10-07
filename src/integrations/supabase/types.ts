@@ -49,6 +49,56 @@ export type Database = {
           },
         ]
       }
+      order_audit_log: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_status: string
+          notes: string | null
+          old_status: string | null
+          order_id: string
+          payment_transaction_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+          order_id: string
+          payment_transaction_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+          order_id?: string
+          payment_transaction_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_audit_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null
@@ -101,6 +151,10 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          payment_method: string | null
+          payment_transaction_id: string | null
+          payment_verified: boolean | null
+          payment_verified_at: string | null
           shipping_address: Json
           status: string
           total_amount: number
@@ -110,6 +164,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          payment_method?: string | null
+          payment_transaction_id?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
           shipping_address: Json
           status?: string
           total_amount: number
@@ -119,6 +177,10 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          payment_method?: string | null
+          payment_transaction_id?: string | null
+          payment_verified?: boolean | null
+          payment_verified_at?: string | null
           shipping_address?: Json
           status?: string
           total_amount?: number
