@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,27 +48,41 @@ const Checkout = () => {
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderItems, setOrderItems] = useState<any[]>([]);
 
-  // Mock order data
-  const orderItems = [
-    {
-      id: "1",
-      name: "Premium Cotton Polo Shirt",
-      price: 2374,
-      quantity: 1,
-      image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&h=100&fit=crop"
-    },
-    {
-      id: "2", 
-      name: "Wireless Bluetooth Earbuds Pro",
-      price: 5699,
-      quantity: 2,
-      image: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=100&h=100&fit=crop"
+  useEffect(() => {
+    loadCartItems();
+  }, []);
+
+  const loadCartItems = () => {
+    try {
+      const cartStr = localStorage.getItem('shopping_cart');
+      if (cartStr) {
+        const cart = JSON.parse(cartStr);
+        // Transform cart items to order format
+        const items = cart.map((item: any) => ({
+          id: item.product_id,
+          name: item.product_name,
+          price: item.price,
+          originalPrice: item.original_price,
+          quantity: item.quantity,
+          image: item.product_image
+        }));
+        setOrderItems(items);
+      } else {
+        // Redirect to cart if empty
+        navigate('/cart');
+      }
+    } catch (error) {
+      console.error('Error loading cart:', error);
+      navigate('/cart');
     }
-  ];
+  };
 
   const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = 0;
+  const originalTotal = orderItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
+  const savings = originalTotal - subtotal;
+  const shipping = subtotal > 1000 ? 0 : 99;
   const tax = Math.round(subtotal * 0.18);
   const total = subtotal + shipping + tax;
 
@@ -541,22 +555,40 @@ const Checkout = () => {
                     <span>Subtotal</span>
                     <span>₹{subtotal.toLocaleString()}</span>
                   </div>
+                  
+                  {savings > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>AI Savings</span>
+                      <span>-₹{savings.toLocaleString()}</span>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span className="text-success">FREE</span>
+                    <span className={shipping === 0 ? "text-success" : ""}>
+                      {shipping === 0 ? "FREE" : `₹${shipping}`}
+                    </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Tax</span>
+                    <span>Tax (18%)</span>
                     <span>₹{tax.toLocaleString()}</span>
                   </div>
                 </div>
 
                 <Separator />
 
-                <div className="flex justify-between text-lg font-semibold">
+                <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
                   <span>₹{total.toLocaleString()}</span>
                 </div>
+
+                {savings > 0 && (
+                  <div className="p-3 bg-success/10 rounded-lg">
+                    <p className="text-sm text-success font-medium">
+                      🎊 You're saving ₹{savings.toLocaleString()} with AI pricing!
+                    </p>
+                  </div>
+                )}
 
                 {/* AI Benefits */}
                 <div className="p-3 bg-primary/10 rounded-lg">
