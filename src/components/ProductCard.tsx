@@ -106,6 +106,37 @@ const ProductCard = ({
   };
 
   const handleAddToCart = () => {
+    const cartItem = {
+      product_id: id,
+      product_name: name,
+      product_image: image,
+      price: currentPrice,
+      original_price: originalPrice,
+      stock: stock,
+      demandLevel: demandLevel
+    };
+    
+    // Get existing cart
+    const existingCart = localStorage.getItem('shopping_cart');
+    let cart = existingCart ? JSON.parse(existingCart) : [];
+    
+    // Check if item already exists
+    const existingIndex = cart.findIndex((item: any) => item.product_id === id);
+    
+    if (existingIndex >= 0) {
+      // Update quantity
+      cart[existingIndex].quantity = Math.min(cart[existingIndex].quantity + 1, stock);
+    } else {
+      // Add new item
+      cart.push({ ...cartItem, quantity: 1 });
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('shopping_cart', JSON.stringify(cart));
+    
+    // Trigger cart update event
+    window.dispatchEvent(new Event('cartUpdated'));
+    
     toast({
       title: "Added to Cart!",
       description: `${name} has been added to your cart`,
@@ -113,11 +144,8 @@ const ProductCard = ({
   };
 
   const handleBuyNow = () => {
+    handleAddToCart();
     navigate("/cart");
-    toast({
-      title: "Proceed to Checkout",
-      description: "Taking you to cart to complete your purchase",
-    });
   };
 
   const handleWishlist = async () => {

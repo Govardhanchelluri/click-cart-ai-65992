@@ -81,27 +81,51 @@ const Checkout = () => {
     setIsProcessing(true);
 
     try {
-      // Get cart items from localStorage
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please login to place an order",
+          variant: "destructive"
+        });
+        navigate('/auth');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Get cart from localStorage using correct key
+      const cartStr = localStorage.getItem('shopping_cart');
+      if (!cartStr) {
+        toast({
+          title: "Cart is Empty",
+          description: "Please add items to your cart first",
+          variant: "destructive"
+        });
+        navigate('/');
+        setIsProcessing(false);
+        return;
+      }
+
+      const cart = JSON.parse(cartStr);
       
-      if (cart.length === 0) {
-        throw new Error("Cart is empty");
+      if (!Array.isArray(cart) || cart.length === 0) {
+        toast({
+          title: "Cart is Empty",
+          description: "Please add items to your cart first",
+          variant: "destructive"
+        });
+        navigate('/');
+        setIsProcessing(false);
+        return;
       }
 
-      // Get user session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Please log in to complete your order");
-      }
-
-      // Prepare order data
       const orderData = {
         items: cart.map((item: any) => ({
-          product_id: item.id,
-          product_name: item.name,
-          product_image: item.image_url || "",
-          quantity: item.quantity || 1,
-          price: item.current_price
+          product_id: item.product_id,
+          product_name: item.product_name,
+          product_image: item.product_image,
+          quantity: item.quantity,
+          price: item.price
         })),
         shipping_address: {
           fullName: `${formData.firstName} ${formData.lastName}`,
@@ -116,40 +140,44 @@ const Checkout = () => {
           ? formData.upiId || "UPI_" + Date.now() 
           : formData.paymentMethod === "card"
           ? "CARD_" + Date.now()
-          : "COD"
+          : undefined
       };
 
-      // Call secure Edge Function to create order
+      console.log('Submitting order:', orderData);
+
       const { data, error } = await supabase.functions.invoke('create-order', {
         body: orderData
       });
 
       if (error) {
-        console.error("Order creation error:", error);
-        throw new Error(error.message || "Failed to create order");
+        console.error('Edge function error:', error);
+        throw error;
       }
 
-      if (!data.success) {
-        throw new Error(data.error || "Failed to create order");
-      }
+      console.log('Order response:', data);
 
-      // Clear cart after successful order
-      localStorage.removeItem("cart");
-      
-      setIsProcessing(false);
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order #${data.order_id.slice(0, 8)} has been confirmed`,
-      });
-      navigate("/order-success");
+      if (data?.success) {
+        // Clear cart
+        localStorage.removeItem('shopping_cart');
+        
+        toast({
+          title: "Order Placed Successfully!",
+          description: `Your order #${data.order_id.slice(0, 8)} has been confirmed`,
+        });
+
+        navigate(`/order-success?orderId=${data.order_id}`);
+      } else {
+        throw new Error(data?.error || 'Failed to create order');
+      }
     } catch (error: any) {
-      console.error("Order error:", error);
-      setIsProcessing(false);
+      console.error('Checkout error:', error);
       toast({
-        title: "Order failed",
-        description: error.message || "Please try again",
+        title: "Order Failed",
+        description: error.message || "Failed to place order. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 

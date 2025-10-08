@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,79 +17,109 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CartItem {
-  id: string;
-  name: string;
-  image: string;
+  product_id: string;
+  product_name: string;
+  product_image: string;
   price: number;
-  originalPrice: number;
+  original_price: number;
   quantity: number;
   stock: number;
-  demandLevel: "high" | "medium" | "low";
+  demandLevel?: "high" | "medium" | "low";
 }
 
 const Cart = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: "1",
-      name: "Premium Cotton Polo Shirt - Classic Fit",
-      image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-      price: 2374,
-      originalPrice: 2499,
-      quantity: 1,
-      stock: 15,
-      demandLevel: "high"
-    },
-    {
-      id: "2",
-      name: "Wireless Bluetooth Earbuds Pro",
-      image: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=300&h=300&fit=crop",
-      price: 5699,
-      originalPrice: 5999,
-      quantity: 2,
-      stock: 8,
-      demandLevel: "medium"
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  const loadCart = () => {
+    try {
+      const stored = localStorage.getItem('shopping_cart');
+      if (stored) {
+        setCartItems(JSON.parse(stored));
+      }
+    } catch (error) {
+      console.error('Error loading cart:', error);
     }
-  ]);
+  };
 
-  const updateQuantity = (id: string, newQuantity: number) => {
+  const saveCart = (items: CartItem[]) => {
+    localStorage.setItem('shopping_cart', JSON.stringify(items));
+    setCartItems(items);
+    // Trigger cart update event
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  const updateQuantity = (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeItem(id);
+      removeItem(productId);
       return;
     }
     
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, quantity: Math.min(newQuantity, item.stock) } : item
-      )
+    const updated = cartItems.map(item =>
+      item.product_id === productId 
+        ? { ...item, quantity: Math.min(newQuantity, item.stock) } 
+        : item
     );
+    saveCart(updated);
   };
 
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+  const removeItem = (productId: string) => {
+    const updated = cartItems.filter(item => item.product_id !== productId);
+    saveCart(updated);
     toast({
       title: "Item removed",
       description: "Item has been removed from your cart",
     });
   };
 
-  const moveToWishlist = (id: string) => {
-    const item = cartItems.find(item => item.id === id);
-    if (item) {
-      removeItem(id);
+  const moveToWishlist = async (productId: string) => {
+    const item = cartItems.find(item => item.product_id === productId);
+    if (!item) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Login Required",
+          description: "Please login to add items to wishlist",
+          variant: "destructive"
+        });
+        navigate("/auth");
+        return;
+      }
+
+      await supabase
+        .from("wishlist")
+        .insert({
+          user_id: user.id,
+          product_id: productId
+        });
+
+      removeItem(productId);
       toast({
         title: "Moved to wishlist",
-        description: `${item.name} has been moved to your wishlist`,
+        description: `${item.product_name} has been moved to your wishlist`,
+      });
+    } catch (error) {
+      console.error("Error moving to wishlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to move item to wishlist",
+        variant: "destructive"
       });
     }
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const originalTotal = cartItems.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
+  const originalTotal = cartItems.reduce((sum, item) => sum + (item.original_price * item.quantity), 0);
   const savings = originalTotal - subtotal;
   const shipping = subtotal > 1000 ? 0 : 99;
   const total = subtotal + shipping;
@@ -149,13 +179,13 @@ const Cart = () => {
             </div>
 
             {cartItems.map((item) => (
-              <Card key={item.id} className="overflow-hidden">
+              <Card key={item.product_id} className="overflow-hidden">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row gap-4">
                     <div className="w-full md:w-32 h-32 overflow-hidden rounded-lg">
                       <img 
-                        src={item.image} 
-                        alt={item.name}
+                        src={item.product_image} 
+                        alt={item.product_name}
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -163,12 +193,12 @@ const Cart = () => {
                     <div className="flex-1 space-y-2">
                       <div className="flex justify-between items-start">
                         <h3 className="font-semibold text-lg line-clamp-2">
-                          {item.name}
+                          {item.product_name}
                         </h3>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.product_id)}
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -180,23 +210,25 @@ const Cart = () => {
                           <Zap className="w-3 h-3 mr-1" />
                           AI Priced
                         </Badge>
-                        {getDemandIcon(item.demandLevel)}
-                        <span className="text-xs text-muted-foreground">
-                          {item.demandLevel} demand
-                        </span>
+                        {item.demandLevel && getDemandIcon(item.demandLevel)}
+                        {item.demandLevel && (
+                          <span className="text-xs text-muted-foreground">
+                            {item.demandLevel} demand
+                          </span>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2">
                         <span className="text-xl font-bold">
                           ₹{item.price.toLocaleString()}
                         </span>
-                        {item.originalPrice > item.price && (
+                        {item.original_price > item.price && (
                           <>
                             <span className="text-sm text-muted-foreground line-through">
-                              ₹{item.originalPrice.toLocaleString()}
+                              ₹{item.original_price.toLocaleString()}
                             </span>
                             <Badge className="bg-success text-success-foreground text-xs">
-                              {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                              {Math.round(((item.original_price - item.price) / item.original_price) * 100)}% OFF
                             </Badge>
                           </>
                         )}
@@ -209,7 +241,7 @@ const Cart = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
                             >
                               <Minus className="w-3 h-3" />
                             </Button>
@@ -220,7 +252,7 @@ const Cart = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                               disabled={item.quantity >= item.stock}
                             >
                               <Plus className="w-3 h-3" />
@@ -234,7 +266,7 @@ const Cart = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => moveToWishlist(item.id)}
+                          onClick={() => moveToWishlist(item.product_id)}
                           className="hover:bg-accent"
                         >
                           <Heart className="w-3 h-3 mr-1" />

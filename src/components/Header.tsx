@@ -34,12 +34,23 @@ const Header = ({ cartItemCount = 0 }: HeaderProps) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [username, setUsername] = useState("User");
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+  const [dynamicCartCount, setDynamicCartCount] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchUsername();
+    updateCartCount();
+    
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+    
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    window.addEventListener('storage', handleCartUpdate);
+    window.addEventListener('focus', updateCartCount);
     
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -48,8 +59,31 @@ const Header = ({ cartItemCount = 0 }: HeaderProps) => {
     };
     
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+      window.removeEventListener('storage', handleCartUpdate);
+      window.removeEventListener('focus', updateCartCount);
+    };
   }, []);
+
+  const updateCartCount = () => {
+    try {
+      const cartStr = localStorage.getItem('shopping_cart');
+      if (cartStr) {
+        const cart = JSON.parse(cartStr);
+        const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+        setDynamicCartCount(count);
+      } else {
+        setDynamicCartCount(0);
+      }
+    } catch (error) {
+      console.error('Error reading cart:', error);
+      setDynamicCartCount(0);
+    }
+  };
+
+  const displayCartCount = dynamicCartCount || cartItemCount;
 
   const fetchUsername = async () => {
     try {
@@ -224,12 +258,12 @@ const Header = ({ cartItemCount = 0 }: HeaderProps) => {
               onClick={() => navigate("/cart")}
             >
               <ShoppingCart className="w-5 h-5" />
-              {cartItemCount > 0 && (
+              {displayCartCount > 0 && (
                 <Badge 
                   variant="destructive" 
                   className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center text-xs animate-scale-in"
                 >
-                  {cartItemCount}
+                  {displayCartCount}
                 </Badge>
               )}
             </Button>
